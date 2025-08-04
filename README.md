@@ -1,1 +1,2 @@
-# Load_Balancing_Algorithms
+# Load-Balancer
+Demonstration of load balancer algorithm in JavaScript.

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pipeline Load Balancer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+      color: #333;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #218838;
+    }
+    .status-box {
+      margin-top: 20px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    .status-box h3 {
+      margin-top: 0;
+    }
+    .workers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .worker {
+      flex: 1 1 150px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #eee;
+      text-align: center;
+    }
+    .worker.busy {
+      background-color: #ffc107;
+    }
+    .worker.idle {
+      background-color: #c3e6cb;
+    }
+    .log {
+      margin-top: 30px;
+      max-height: 250px;
+      overflow-y: auto;
+      background: #222;
+      color: #0f0;
+      padding: 10px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚙️ Node.js Pipeline Load Balancer</h1>
+  <button onclick="sendRequest()">Send Request</button>
+
+  <div class="status-box">
+    <h3>👷 Worker Status</h3>
+    <div id="workerStatus" class="workers"></div>
+    <p>📦 Queue Length: <span id="queueLength">0</span></p>
+  </div>
+
+  <div class="log" id="logBox"></div>
+
+  <script>
+    let requestCounter = 0;
+
+    function log(message) {
+      const logBox = document.getElementById("logBox");
+      const now = new Date().toLocaleTimeString();
+      logBox.innerHTML += `[${now}] ${message}<br>`;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function sendRequest() {
+      const reqId = ++requestCounter;
+      log(`📤 Request #${reqId} sent to load balancer`);
+
+      fetch("http://localhost:3000/load")
+        .then((res) => res.text())
+        .then((msg) => {
+          log(`✅ Request #${reqId} completed: ${msg.trim()}`);
+        })
+        .catch((err) => {
+          log(`❌ Request #${reqId} failed: ${err}`);
+        });
+    }
+
+    function updateWorkerStatus(workers) {
+      const container = document.getElementById("workerStatus");
+      container.innerHTML = "";
+
+      for (const [pid, status] of Object.entries(workers)) {
+        const div = document.createElement("div");
+        div.className = `worker ${status}`;
+        div.textContent = `PID: ${pid}\nStatus: ${status}`;
+        container.appendChild(div);
+      }
+    }
+
+    function pollStatus() {
+      fetch("http://localhost:3000/status")
+        .then((res) => res.json())
+        .then((data) => {
+          updateWorkerStatus(data.workers);
+          document.getElementById("queueLength").textContent = data.queueLength;
+        })
+        .catch((err) => {
+          console.error("Failed to fetch status", err);
+        });
+    }
+
+    setInterval(pollStatus, 1000); // Poll every 1 second
+  </script>
+</body>
+</html>

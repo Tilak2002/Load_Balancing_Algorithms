@@ -1,0 +1,111 @@
+Before Proceeding Further Make sure to install Node.js Version: 23.1.0, and then do "npm i".
+
+LeastConnection:-
+    Terminal-1:
+    cd leastconnection 
+    node index_leastconnection.js
+    right click on HTML file and open with live server
+
+    Terminal-2 (Testing): node loadTest.js
+
+    PipeTesting:-
+    Terminal-1: node pipe_leastconnection.js
+    right click on HTML file pipe_general.html and open with live server
+    Click on send request in browser and observe output in both terminal and browser
+
+
+RoundRobin:-
+    Terminal-1:
+    cd RoundRobin
+    node index_roundrobin.js
+    right click on HTML file and open with live server
+
+    Terminal-2 (Testing): node loadTest.js
+
+    PipeTesting:-
+    Terminal-1: node pipe_round_robin.js
+    right click on HTML file pipe_general.html and open with live server
+    Click on send request in browser and observe output in both terminal and browser
+
+
+FCFS:-
+    Terminal-1:
+    cd FCFS
+    node index_fcfs.js
+    right click on HTML file and open with live server
+
+    Terminal-2 (Testing): node loadTest.js
+
+    PipeTesting:-
+    Terminal-1: node pipe_fcfs.js
+    right click on HTML file pipe_general.html and open with live server
+    Click on send request in browser and observe output in both terminal and browser
+
+
+Dynamic Load Balancer:-
+    Terminal-1:
+    node index_dynamic_improved.js
+    right click on HTML file index_dynamic_improved.html and open with live server
+
+    Terminal-2 (Testing): node loadTest.js
+
+    PipeTesting:-
+    Terminal-1: node pipe_dynamic_load_balancer.js
+    right click on HTML file pipe_general.html and open with live server
+    Click on send request in browser and observe output in both terminal and browser
+
+
+IP Hashing:-
+    Terminal-1:
+    cd ip_hashing
+    node index_ip_hashing.js
+    right click on HTML file and open with live server
+
+    Terminal-2 (Testing): node loadTest.js 
+
+    PipeTesting:-
+    Terminal-1: node pipe_ip_hashing.js
+    right click on HTML file pipe_general.html and open with live server
+    Click on send request in browser and observe output in both terminal and browser
+
+
+Priority Queue:-
+    Terminal-1:
+    cd priority_queue
+    node index_priority_queue.js
+    right click on HTML file and open with live server
+
+    Terminal-2 (Testing): node loadTest.js
+
+    PipeTesting:-
+    Terminal-1: node pipe_priority_queue.js
+    right click on HTML file pipe_general.html and open with live server
+    Click on send request in browser and observe output in both terminal and browser
+
+
+Random Load Balancer:-
+    Terminal-1:
+    cd random_load_balancer
+    node index_random.js
+    right click on HTML file and open with live server
+
+    Terminal-2 (Testing): node loadTest.js 
+
+    PipeTesting:-
+    Terminal-1: node pipe_random_load_balancer.js
+    right click on HTML file pipe_general.html and open with live server
+    Click on send request in browser and observe output in both terminal and browser
+
+
+SJF:-
+    Terminal-1:
+    cd SJF
+    node index_sjf.js
+    right click on HTML file and open with live server
+
+    Terminal-2 (Testing): node loadTest.js 
+
+    PipeTesting:-
+    Terminal-1: node pipe_sjf.js
+    right click on HTML file pipe_general.html and open with live server
+    Click on send request in browser and observe output in both terminal and browser

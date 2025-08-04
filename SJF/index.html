@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shortest Job First Load Balancer Visualization</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8f9fa;
+      padding: 20px;
+      color: #333;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #2c3e50;
+    }
+    .description {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #555;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      position: relative;
+    }
+    .algorithm-info {
+      background-color: #eaf2fd;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      border-left: 5px solid #3498db;
+      max-width: 800px;
+      width: 100%;
+    }
+    .algorithm-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    .system-container {
+      display: flex;
+      width: 100%;
+      gap: 40px;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .load-balancer {
+      width: 160px;
+      height: 160px;
+      background-color: #3498db;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      position: relative;
+      transition: transform 0.2s;
+    }
+    .load-balancer:hover {
+      transform: scale(1.03);
+    }
+    .load-balancer-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+    .workers-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .worker {
+      width: 120px;
+      height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      font-weight: bold;
+      color: white;
+      transition: all 0.3s;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+    .worker-icon {
+      font-size: 30px;
+      margin-bottom: 5px;
+    }
+    .worker .status {
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    .worker .load {
+      font-size: 16px;
+      margin-top: 2px;
+    }
+    .worker .pid {
+      font-size: 11px;
+      margin-top: 2px;
+      opacity: 0.8;
+    }
+    .idle {
+      background-color: #2ecc71;
+    }
+    .busy {
+      background-color: #e74c3c;
+    }
+    .status-indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .status-indicator.idle {
+      background-color: #2ecc71;
+    }
+    .status-indicator.busy {
+      background-color: #e74c3c;
+    }
+    .requests-panel {
+      background-color: white;
+      border-radius: 10px;
+      padding: 15px;
+      width: 100%;
+      max-width: 800px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .request-controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+    .counters {
+      display: flex;
+      justify-content: space-around;
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    .counter {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      padding: 10px;
+      flex: 1;
+      text-align: center;
+    }
+    .counter-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .counter-label {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 5px;
+    }
+    .logs {
+      max-height: 200px;
+      overflow-y: auto;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+    }
+    .log-entry {
+      padding: 8px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+    }
+    .log-entry.sent {
+      background-color: #eaf2fd;
+    }
+    .log-entry.completed {
+      background-color: #eafaef;
+    }
+    .log-entry.error {
+      background-color: #fdeeee;
+    }
+    .log-time {
+      color: #7f8c8d;
+      margin-right: 10px;
+      font-size: 12px;
+    }
+    .request-ball {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      background-color: #f39c12;
+      border-radius: 50%;
+      z-index: 100;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+      pointer-events: none;
+    }
+    .job-info {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Shortest Job First Load Balancer Visualization</h1>
+  <div class="container">
+    <div class="algorithm-info">
+      <div class="algorithm-title">SJF Algorithm:</div>
+      <div>In this load balancing strategy, incoming requests are assigned to the worker with the lowest total estimated processing time. This minimizes the average wait time across all requests, making it efficient for systems with varying job sizes.</div>
+    </div>
+    
+    <div class="system-container">
+      <div class="load-balancer">
+        <div class="load-balancer-icon">🔄</div>
+        <div>Load Balancer</div>
+        <div style="font-size: 12px; margin-top: 5px;">Master Process</div>
+      </div>
+      
+      <div class="workers-container">
+        <div id="worker1" class="worker idle">
+          <div class="worker-icon">⚙️</div>
+          <div>Worker 1</div>
+          <div class="status">Idle</div>
+          <div class="load" id="load-1">0 ms</div>
+          <div class="pid" id="pid1">PID: -</div>
+          <div class="status-indicator idle"></div>
+        </div>
+        <div id="worker2" class="worker idle">
+          <div class="worker-icon">⚙️</div>
+          <div>Worker 2</div>
+          <div class="status">Idle</div>
+          <div class="load" id="load-2">0 ms</div>
+          <div class="pid" id="pid2">PID: -</div>
+          <div class="status-indicator idle"></div>
+        </div>
+        <div id="worker3" class="worker idle">
+          <div class="worker-icon">⚙️</div>
+          <div>Worker 3</div>
+          <div class="status">Idle</div>
+          <div class="load" id="load-3">0 ms</div>
+          <div class="pid" id="pid3">PID: -</div>
+          <div class="status-indicator idle"></div>
+        </div>
+        <div id="worker4" class="worker idle">
+          <div class="worker-icon">⚙️</div>
+          <div>Worker 4</div>
+          <div class="status">Idle</div>
+          <div class="load" id="load-4">0 ms</div>
+          <div class="pid" id="pid4">PID: -</div>
+          <div class="status-indicator idle"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="requests-panel">
+      <div class="request-controls">
+        <button id="singleRequestBtn" onclick="sendRequest()">Send Single Request</button>
+        <button id="startSpamBtn" onclick="startSpam()">Send Repeated Requests</button>
+        <button id="stopSpamBtn" onclick="stopSpam()" disabled>Stop Repeated Requests</button>
+      </div>
+      
+      <div class="counters">
+        <div class="counter">
+          <div class="counter-value" id="totalCounter">0</div>
+          <div class="counter-label">Total Requests</div>
+        </div>
+        <div class="counter">
+          <div class="counter-value" id="completedCounter">0</div>
+          <div class="counter-label">Completed</div>
+        </div>
+        <div class="counter">
+          <div class="counter-value" id="avgTimeCounter">0</div>
+          <div class="counter-label">Avg. Processing Time (ms)</div>
+        </div>
+      </div>
+      
+      <div class="logs" id="logContainer">
+        <!-- Log entries will be added here -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global variables
+    let spamInterval = null;
+    let requestId = 0;
+    let totalRequests = 0;
+    let completedRequests = 0;
+    let totalProcessingTime = 0;
+    const workerPids = {};
+    const activeRequests = {};
+    const workerLoads = {};
+    
+    // Get position of element relative to the document
+    function getAbsolutePosition(element) {
+      const rect = element.getBoundingClientRect();
+      return {
+        x: rect.left + window.scrollX + rect.width / 2,
+        y: rect.top + window.scrollY + rect.height / 2
+      };
+    }
+    
+    // Animate request from load balancer to worker
+    function animateRequest(requestIdForAnimation, processingTime, workerElement) {
+      const balancer = document.querySelector('.load-balancer');
+      const container = document.querySelector('.container');
+      
+      // Create request ball
+      const ball = document.createElement('div');
+      ball.className = 'request-ball';
+      ball.id = `request-${requestIdForAnimation}`;
+      document.body.appendChild(ball);
+      
+      // Add job info
+      const jobInfo = document.createElement('div');
+      jobInfo.className = 'job-info';
+      jobInfo.textContent = `${processingTime} ms`;
+      ball.appendChild(jobInfo);
+      
+      // Get positions for animation
+      const balancerPos = getAbsolutePosition(balancer);
+      const workerPos = getAbsolutePosition(workerElement);
+      
+      // Set initial position
+      ball.style.left = `${balancerPos.x}px`;
+      ball.style.top = `${balancerPos.y}px`;
+      
+      // Animation
+      const startTime = performance.now();
+      const duration = 600; // Animation duration in milliseconds
+      
+      function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const currentX = balancerPos.x + (workerPos.x - balancerPos.x) * progress;
+        const currentY = balancerPos.y + (workerPos.y - balancerPos.y) * progress;
+        
+        ball.style.left = `${currentX}px`;
+        ball.style.top = `${currentY}px`;
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // Pulse effect at destination
+          ball.style.transform = 'translate(-50%, -50%) scale(1.5)';
+          ball.style.opacity = '0';
+          ball.style.transition = 'transform 0.3s, opacity 0.3s';
+          
+          // Remove ball after animation completes
+          setTimeout(() => {
+            ball.remove();
+          }, 300);
+        }
+      }
+      
+      requestAnimationFrame(animate);
+    }
+    
+    // Add log entry
+    function addLogEntry(message, type = 'sent') {
+      const log = document.getElementById('logContainer');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      
+      // Create timestamp
+      const now = new Date();
+      const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+      
+      entry.innerHTML = `<span class="log-time">${time}</span> ${message}`;
+      log.insertBefore(entry, log.firstChild);
+      
+      // Limit log entries
+      if (log.children.length > 50) {
+        log.removeChild(log.lastChild);
+      }
+    }
+    
+    // Update counters
+    function updateCounters() {
+      document.getElementById('totalCounter').textContent = totalRequests;
+      document.getElementById('completedCounter').textContent = completedRequests;
+      
+      if (completedRequests > 0) {
+        const avgTime = Math.round(totalProcessingTime / completedRequests);
+        document.getElementById('avgTimeCounter').textContent = avgTime;
+      }
+    }
+    
+    // Handle window resize to reposition elements if needed
+    window.addEventListener('resize', function() {
+      // This ensures animations will use updated positions after resize
+    });
+    
+    // Send a single request
+    async function sendRequest() {
+      const currentRequestId = ++requestId;
+      totalRequests++;
+      updateCounters();
+      
+      try {
+        const response = await fetch("http://localhost:3000/load");
+        const text = await response.text();
+        
+        // Parse worker PID and expected time
+        const pidMatch = text.match(/Worker (\d+)/);
+        const timeMatch = text.match(/Expected Time: (\d+)ms/);
+        
+        if (pidMatch && pidMatch[1] && timeMatch && timeMatch[1]) {
+          const workerPid = pidMatch[1];
+          const processingTime = parseInt(timeMatch[1]);
+          
+          // Find or assign worker
+          let workerIndex = null;
+          for (const [idx, pid] of Object.entries(workerPids)) {
+            if (pid === workerPid) {
+              workerIndex = idx;
+              break;
+            }
+          }
+          
+          if (!workerIndex) {
+            // Assign this PID to first available worker
+            for (let i = 1; i <= 4; i++) {
+              if (!workerPids[i]) {
+                workerPids[i] = workerPid;
+                workerIndex = i;
+                document.getElementById(`pid${i}`).textContent = `PID: ${workerPid}`;
+                break;
+              }
+            }
+          }
+          
+          if (workerIndex) {
+            const workerElement = document.getElementById(`worker${workerIndex}`);
+            
+            // Update worker status
+            if (!workerLoads[workerPid]) {
+              workerLoads[workerPid] = 0;
+            }
+            workerLoads[workerPid] += processingTime;
+            updateWorkerDisplays();
+            
+            // Store active request
+            activeRequests[currentRequestId] = {
+              pid: workerPid,
+              workerIndex,
+              processingTime,
+              startTime: Date.now()
+            };
+            
+            // Animate request to worker
+            animateRequest(currentRequestId, processingTime, workerElement);
+            
+            addLogEntry(`Request #${currentRequestId} (${processingTime}ms) assigned to Worker ${workerIndex} (PID: ${workerPid})`, 'sent');
+            
+            // Schedule request completion (this is just for visualization)
+            setTimeout(() => {
+              completeRequest(currentRequestId);
+            }, processingTime);
+          }
+        }
+      } catch (err) {
+        addLogEntry(`Error sending request: ${err.message}`, 'error');
+      }
+    }
+    
+    // Complete a request (for visualization purposes)
+    function completeRequest(reqId) {
+      const request = activeRequests[reqId];
+      if (request) {
+        workerLoads[request.pid] -= request.processingTime;
+        if (workerLoads[request.pid] < 0) workerLoads[request.pid] = 0;
+        
+        completedRequests++;
+        totalProcessingTime += request.processingTime;
+        
+        updateWorkerDisplays();
+        updateCounters();
+        
+        addLogEntry(`Request #${reqId} completed by Worker ${request.workerIndex} (PID: ${request.pid}) in ${request.processingTime}ms`, 'completed');
+        
+        delete activeRequests[reqId];
+      }
+    }
+    
+    // Update worker displays
+    function updateWorkerDisplays() {
+      for (let i = 1; i <= 4; i++) {
+        const workerElement = document.getElementById(`worker${i}`);
+        const pid = workerPids[i];
+        
+        if (pid) {
+          const load = workerLoads[pid] || 0;
+          document.getElementById(`load-${i}`).textContent = `${load} ms`;
+          
+          // Update status based on load
+          const status = load > 0 ? 'busy' : 'idle';
+          workerElement.className = `worker ${status}`;
+          workerElement.querySelector('.status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+          workerElement.querySelector('.status-indicator').className = `status-indicator ${status}`;
+        }
+      }
+    }
+    
+    // Fetch status from server
+    async function fetchStatus() {
+      try {
+        const res = await fetch("http://localhost:3000/status");
+        const data = await res.json();
+        
+        // Map PIDs to worker indices
+        for (const pid of Object.keys(data)) {
+          let assigned = false;
+          for (const [idx, workerPid] of Object.entries(workerPids)) {
+            if (workerPid === pid) {
+              assigned = true;
+              break;
+            }
+          }
+          
+          if (!assigned) {
+            // Find empty worker slot
+            for (let i = 1; i <= 4; i++) {
+              if (!workerPids[i]) {
+                workerPids[i] = pid;
+                document.getElementById(`pid${i}`).textContent = `PID: ${pid}`;
+                break;
+              }
+            }
+          }
+          
+          // Update worker loads
+          workerLoads[pid] = data[pid];
+        }
+        
+        updateWorkerDisplays();
+      } catch (err) {
+        console.error("Failed to fetch status:", err);
+      }
+    }
+    
+    // Start spam
+    function startSpam() {
+      if (spamInterval) return;
+      
+      document.getElementById('startSpamBtn').disabled = true;
+      document.getElementById('stopSpamBtn').disabled = false;
+      
+      spamInterval = setInterval(sendRequest, 1000);
+      addLogEntry('Started sending repeated requests', 'sent');
+    }
+    
+    // Stop spam
+    function stopSpam() {
+      clearInterval(spamInterval);
+      spamInterval = null;
+      
+      document.getElementById('startSpamBtn').disabled = false;
+      document.getElementById('stopSpamBtn').disabled = true;
+      
+      addLogEntry('Stopped sending repeated requests', 'sent');
+    }
+    
+    // Initial setup
+    window.onload = function() {
+      fetchStatus();
+      setInterval(fetchStatus, 1000);
+    };
+  </script>
+</body>
+</html>

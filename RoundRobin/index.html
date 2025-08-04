@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Round Robin Load Balancer Visualization</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8f9fa;
+      padding: 20px;
+      color: #333;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      position: relative;
+    }
+    .system-container {
+      display: flex;
+      width: 100%;
+      gap: 40px;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .load-balancer {
+      width: 160px;
+      height: 160px;
+      background-color: #3498db;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      position: relative;
+      transition: transform 0.2s;
+    }
+    .load-balancer:hover {
+      transform: scale(1.03);
+    }
+    .active-worker-indicator {
+      position: absolute;
+      bottom: 2px;
+      font-size: 12px;
+      background-color: #2ecc71;
+      padding: 4px 8px;
+      border-radius: 10px;
+    }
+    .load-balancer-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+    .workers-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .worker {
+      width: 120px;
+      height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      font-weight: bold;
+      color: white;
+      transition: all 0.3s;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+    .worker-icon {
+      font-size: 30px;
+      margin-bottom: 5px;
+    }
+    .worker .status {
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    .worker .pid {
+      font-size: 11px;
+      margin-top: 2px;
+      opacity: 0.8;
+    }
+    .selected-indicator {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #f39c12;
+      color: white;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 10px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .selected-indicator.active {
+      opacity: 1;
+    }
+    .idle {
+      background-color: #2ecc71;
+    }
+    .busy {
+      background-color: #e74c3c;
+    }
+    .requests-panel {
+      background-color: white;
+      border-radius: 10px;
+      padding: 15px;
+      width: 100%;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .request-controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+    .requests-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+    .requests-log {
+      max-height: 200px;
+      overflow-y: auto;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+    }
+    .log-entry {
+      padding: 8px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+    }
+    .log-entry.sent {
+      background-color: #eaf2fd;
+    }
+    .log-entry.completed {
+      background-color: #eafaef;
+    }
+    .log-entry.error {
+      background-color: #fdeeee;
+    }
+    .log-time {
+      color: #7f8c8d;
+      margin-right: 10px;
+      font-size: 12px;
+    }
+    .request-ball-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      overflow: visible;
+    }
+    .request-ball {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      background-color: #f39c12;
+      border-radius: 50%;
+      z-index: 100;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+    }
+    .status-indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .status-indicator.idle {
+      background-color: #2ecc71;
+    }
+    .status-indicator.busy {
+      background-color: #e74c3c;
+    }
+    .counters {
+      display: flex;
+      gap: 20px;
+      margin-top: 10px;
+    }
+    .counter {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      padding: 10px;
+      flex: 1;
+      text-align: center;
+    }
+    .counter-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .counter-label {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Round Robin Load Balancer Visualization</h1>
+  <div class="container">
+    <div class="system-container">
+      <div class="load-balancer">
+        <div class="load-balancer-icon">🔄</div>
+        <div>Load Balancer</div>
+        <div style="font-size: 12px; margin-top: 5px;">Master Process</div>
+        <div class="active-worker-indicator" id="nextWorkerIndicator">Next: Worker 1</div>
+      </div>
+      
+      <div class="workers-container">
+        <div id="worker1" class="worker idle">
+          <div class="selected-indicator" id="indicator1">NEXT</div>
+          <div class="worker-icon">⚙️</div>
+          <div>Worker 1</div>
+          <div class="status">Idle</div>
+          <div class="pid" id="pid1">PID: -</div>
+          <div class="status-indicator idle"></div>
+        </div>
+        <div id="worker2" class="worker idle">
+          <div class="selected-indicator" id="indicator2">NEXT</div>
+          <div class="worker-icon">⚙️</div>
+          <div>Worker 2</div>
+          <div class="status">Idle</div>
+          <div class="pid" id="pid2">PID: -</div>
+          <div class="status-indicator idle"></div>
+        </div>
+        <div id="worker3" class="worker idle">
+          <div class="selected-indicator" id="indicator3">NEXT</div>
+          <div class="worker-icon">⚙️</div>
+          <div>Worker 3</div>
+          <div class="status">Idle</div>
+          <div class="pid" id="pid3">PID: -</div>
+          <div class="status-indicator idle"></div>
+        </div>
+        <div id="worker4" class="worker idle">
+          <div class="selected-indicator" id="indicator4">NEXT</div>
+          <div class="worker-icon">⚙️</div>
+          <div>Worker 4</div>
+          <div class="status">Idle</div>
+          <div class="pid" id="pid4">PID: -</div>
+          <div class="status-indicator idle"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Container for request animation balls -->
+    <div id="request-ball-container" class="request-ball-container"></div>
+    
+    <div class="requests-panel">
+      <div class="request-controls">
+        <button id="singleRequestBtn" onclick="sendSingleRequest()">Send Single Request</button>
+        <button id="startSpamBtn" onclick="startSpamRequests()">Send Repeated Requests</button>
+        <button id="stopSpamBtn" onclick="stopSpamRequests()" disabled>Stop Repeated Requests</button>
+      </div>
+      
+      <div class="counters">
+        <div class="counter">
+          <div class="counter-value" id="totalCounter">0</div>
+          <div class="counter-label">Total Requests</div>
+        </div>
+        <div class="counter">
+          <div class="counter-value" id="completedCounter">0</div>
+          <div class="counter-label">Completed</div>
+        </div>
+        <div class="counter">
+          <div class="counter-value" id="activeCounter">0</div>
+          <div class="counter-label">Active</div>
+        </div>
+        <div class="counter">
+          <div class="counter-value" id="pendingCounter">0</div>
+          <div class="counter-label">Queue</div>
+        </div>
+      </div>
+      
+      <div class="requests-log" id="requestsLog">
+        <!-- Log entries will be added here -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let interval = null;
+    let requestId = 0;
+    let activeRequests = {};
+    let totalRequests = 0;
+    let completedRequests = 0;
+    let queuedRequests = 0;
+    const workerPids = {};
+    let currentWorkerIndex = 1; // Track which worker is next in the round-robin sequence
+    
+    // Update the visual indicator for which worker is next
+    function updateNextWorkerIndicator() {
+      // Hide all indicators first
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById(`indicator${i}`).classList.remove('active');
+      }
+      
+      // Show the indicator for the next worker
+      document.getElementById(`indicator${currentWorkerIndex}`).classList.add('active');
+      document.getElementById('nextWorkerIndicator').textContent = `Next: Worker ${currentWorkerIndex}`;
+    }
+    
+    // Get position relative to the system container
+    function getElementPosition(element) {
+      const rect = element.getBoundingClientRect();
+      const container = document.querySelector('.system-container').getBoundingClientRect();
+      
+      return {
+        x: rect.left - container.left + rect.width / 2,
+        y: rect.top - container.top + rect.height / 2
+      };
+    }
+    
+    // Animate request
+    function animateRequest(workerElement, requestIdForAnimation) {
+      const balancer = document.querySelector('.load-balancer');
+      const ballContainer = document.getElementById('request-ball-container');
+      
+      // Get positions relative to the container
+      const systemContainer = document.querySelector('.system-container');
+      const systemRect = systemContainer.getBoundingClientRect();
+      
+      const balancerRect = balancer.getBoundingClientRect();
+      const workerRect = workerElement.getBoundingClientRect();
+      
+      // Calculate start and end positions
+      const startX = balancerRect.left - systemRect.left + balancerRect.width / 2;
+      const startY = balancerRect.top - systemRect.top + balancerRect.height / 2;
+      
+      const endX = workerRect.left - systemRect.left + workerRect.width / 2;
+      const endY = workerRect.top - systemRect.top + workerRect.height / 2;
+      
+      // Create request ball
+      const ball = document.createElement('div');
+      ball.className = 'request-ball';
+      ball.id = `request-${requestIdForAnimation}`;
+      ballContainer.appendChild(ball);
+      
+      // Start position
+      ball.style.left = `${startX}px`;
+      ball.style.top = `${startY}px`;
+      
+      // Animation
+      const startTime = performance.now();
+      const duration = 600; // Animation duration in milliseconds
+      
+      function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const currentX = startX + (endX - startX) * progress;
+        const currentY = startY + (endY - startY) * progress;
+        
+        ball.style.left = `${currentX}px`;
+        ball.style.top = `${currentY}px`;
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // Pulse effect at destination
+          ball.style.transform = 'translate(-50%, -50%) scale(1.5)';
+          ball.style.opacity = '0';
+          ball.style.transition = 'transform 0.3s, opacity 0.3s';
+          
+          // Remove ball after animation completes
+          setTimeout(() => {
+            ball.remove();
+          }, 300);
+        }
+      }
+      
+      requestAnimationFrame(animate);
+    }
+    
+    // Add log entry
+    function addLogEntry(message, type = 'sent') {
+      const log = document.getElementById('requestsLog');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      
+      // Create timestamp
+      const now = new Date();
+      const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+      
+      entry.innerHTML = `<span class="log-time">${time}</span> ${message}`;
+      log.insertBefore(entry, log.firstChild);
+      
+      // Limit log entries
+      if (log.children.length > 50) {
+        log.removeChild(log.lastChild);
+      }
+    }
+    
+    // Update worker status display
+    function updateWorkerDisplay(workerStatus) {
+      let activeTasks = 0;
+      
+      for (const [pid, status] of Object.entries(workerStatus)) {
+        // Find which worker this PID belongs to
+        let workerIdx = -1;
+        for (const [idx, workerPid] of Object.entries(workerPids)) {
+          if (workerPid === pid) {
+            workerIdx = parseInt(idx);
+            break;
+          }
+        }
+        
+        if (workerIdx === -1) {
+          // Need to assign this PID to a worker
+          for (let i = 1; i <= 4; i++) {
+            if (!Object.values(workerPids).includes(pid) && !workerPids[i]) {
+              workerPids[i] = pid;
+              workerIdx = i;
+              document.getElementById(`pid${i}`).textContent = `PID: ${pid}`;
+              break;
+            }
+          }
+        }
+        
+        if (workerIdx > 0) {
+          const workerBox = document.getElementById(`worker${workerIdx}`);
+          const statusText = workerBox.querySelector('.status');
+          const statusIndicator = workerBox.querySelector('.status-indicator');
+          
+          workerBox.className = `worker ${status}`;
+          statusText.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+          statusIndicator.className = `status-indicator ${status}`;
+          
+          if (status === 'busy') {
+            activeTasks++;
+          }
+        }
+      }
+      
+      // Update counters
+      document.getElementById('activeCounter').textContent = activeTasks;
+    }
+    
+    // Update counters
+    function updateCounters() {
+      document.getElementById('totalCounter').textContent = totalRequests;
+      document.getElementById('completedCounter').textContent = completedRequests;
+      document.getElementById('pendingCounter').textContent = queuedRequests;
+    }
+    
+    // Send a single request
+    async function sendSingleRequest() {
+      const currentRequestId = ++requestId;
+      totalRequests++;
+      queuedRequests++;
+      updateCounters();
+      
+      // Get the current worker in round-robin sequence
+      const selectedWorkerIndex = currentWorkerIndex;
+      const workerElement = document.getElementById(`worker${selectedWorkerIndex}`);
+      
+      // Move to next worker for next request (round-robin)
+      currentWorkerIndex = currentWorkerIndex % 4 + 1;
+      updateNextWorkerIndicator();
+      
+      addLogEntry(`Request #${currentRequestId} sent to load balancer`);
+      
+      try {
+        const response = await fetch("http://localhost:3000/load");
+        const text = await response.text();
+        queuedRequests--;
+        
+        if (response.status === 200) {
+          // Extract the PID from the response
+          const pidMatch = text.match(/Worker (\d+)/);
+          let workerPid = null;
+          if (pidMatch && pidMatch[1]) {
+            workerPid = pidMatch[1];
+            
+            if (!workerPids[selectedWorkerIndex]) {
+              workerPids[selectedWorkerIndex] = workerPid;
+              document.getElementById(`pid${selectedWorkerIndex}`).textContent = `PID: ${workerPid}`;
+            }
+            
+            // Store the request
+            activeRequests[currentRequestId] = {
+              workerId: selectedWorkerIndex,
+              pid: workerPid,
+              startTime: new Date()
+            };
+            
+            // Animate the request
+            animateRequest(workerElement, currentRequestId);
+            
+            addLogEntry(`Request #${currentRequestId} assigned to Worker ${selectedWorkerIndex} (PID: ${workerPid}) [Round Robin]`);
+          }
+        } else {
+          addLogEntry(`Request #${currentRequestId} failed with status: ${response.status}`, 'error');
+        }
+        
+        updateWorkerStatus();
+      } catch (e) {
+        queuedRequests--;
+        addLogEntry(`Request #${currentRequestId} failed: ${e.message}`, 'error');
+      }
+      
+      updateCounters();
+    }
+    
+    // Start repeated requests
+    function startSpamRequests() {
+      if (interval) return;
+      
+      document.getElementById('startSpamBtn').disabled = true;
+      document.getElementById('stopSpamBtn').disabled = false;
+      
+      interval = setInterval(sendSingleRequest, 1000);
+      addLogEntry('Started sending repeated requests', 'info');
+    }
+    
+    // Stop repeated requests
+    function stopSpamRequests() {
+      clearInterval(interval);
+      interval = null;
+      
+      document.getElementById('startSpamBtn').disabled = false;
+      document.getElementById('stopSpamBtn').disabled = true;
+      
+      addLogEntry('Stopped sending repeated requests', 'info');
+    }
+    
+    // Update worker statuses
+    async function updateWorkerStatus() {
+      try {
+        const res = await fetch("http://localhost:3000/status");
+        const data = await res.json();
+        
+        // Check for completed requests
+        const currentWorkerStatus = {};
+        Object.entries(data).forEach(([pid, status]) => {
+          currentWorkerStatus[pid] = status;
+        });
+        
+        // Find any requests that have completed
+        Object.entries(activeRequests).forEach(([reqId, request]) => {
+          const pid = request.pid;
+          if (currentWorkerStatus[pid] === 'idle' && data[pid] === 'idle') {
+            // This request might have completed
+            const now = new Date();
+            const elapsed = now - request.startTime;
+            
+            // If it's been at least 1.8 seconds since the request started,
+            // and the worker is idle, we assume the request completed
+            if (elapsed > 1800) {
+              completedRequests++;
+              addLogEntry(`Request #${reqId} completed by Worker ${request.workerId} (PID: ${pid})`, 'completed');
+              delete activeRequests[reqId];
+              updateCounters();
+            }
+          }
+        });
+        
+        updateWorkerDisplay(data);
+      } catch (e) {
+        console.error("Failed to update status:", e);
+      }
+    }
+    
+    // Initial setup
+    window.onload = function() {
+      // Create dedicated container for request balls
+      const container = document.querySelector('.container');
+      const ballContainer = document.getElementById('request-ball-container');
+      
+      // Position the ball container correctly
+      const systemContainer = document.querySelector('.system-container');
+      const systemRect = systemContainer.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      
+      ballContainer.style.width = `${systemRect.width}px`;
+      ballContainer.style.height = `${systemRect.height}px`;
+      ballContainer.style.top = `${systemRect.top - containerRect.top}px`;
+      ballContainer.style.left = `${systemRect.left - containerRect.left}px`;
+      
+      // Update the indicator showing which worker is next
+      updateNextWorkerIndicator();
+      
+      setInterval(updateWorkerStatus, 500);
+      updateWorkerStatus();
+    };
+  </script>
+</body>
+</html>
