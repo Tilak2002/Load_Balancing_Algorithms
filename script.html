@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FCFS Load Balancer Dashboard</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #4f46e5;
+      color: white;
+      padding: 1rem 2rem;
+      font-size: 1.5rem;
+    }
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      padding: 2rem;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      padding: 1.5rem;
+    }
+    .queue, .workers {
+      margin-top: 1rem;
+    }
+    .btn {
+      background: #4f46e5;
+      color: white;
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .log {
+      max-height: 200px;
+      overflow-y: auto;
+      background: #111827;
+      color: #d1d5db;
+      padding: 1rem;
+      font-family: monospace;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    .worker-idle { color: green; }
+    .worker-busy { color: red; }
+  </style>
+</head>
+<body>
+  <header>⚙️ FCFS Load Balancer Dashboard</header>
+
+  <div class="dashboard">
+    <div class="card">
+      <h2>🔁 Request Queue</h2>
+      <button class="btn" onclick="sendRequest()">➕ Add Request</button>
+      <div class="queue" id="queue"></div>
+      <div class="log" id="log"></div>
+    </div>
+    <div class="card">
+      <h2>👷 Worker Status</h2>
+      <div class="workers" id="workers"></div>
+    </div>
+  </div>
+
+  <script>
+    let requestCount = 0;
+
+    function logMessage(msg) {
+      const log = document.getElementById("log");
+      log.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + log.innerHTML;
+    }
+
+    async function sendRequest() {
+      requestCount++;
+      const reqId = `req-${requestCount}`;
+      logMessage(`📤 Request ${reqId} sent to load balancer`);
+
+      try {
+        const res = await fetch("http://localhost:3000/load");
+        const text = await res.text();
+        logMessage(`✅ ${text}`);
+      } catch (e) {
+        logMessage(`❌ Request ${reqId} failed: ${e}`);
+      }
+    }
+
+    async function updateStatus() {
+      try {
+        const res = await fetch("http://localhost:3000/status");
+        const data = await res.json();
+
+        const queueHTML = `<p>Queue Length: <strong>${data.queueLength}</strong></p>`;
+        document.getElementById("queue").innerHTML = queueHTML;
+
+        let workersHTML = "";
+        for (const [pid, status] of Object.entries(data.workers)) {
+          const cls = status === 'idle' ? 'worker-idle' : 'worker-busy';
+          workersHTML += `<p>Worker ${pid}: <span class="${cls}">${status}</span></p>`;
+        }
+        document.getElementById("workers").innerHTML = workersHTML;
+      } catch (err) {
+        logMessage(`⚠️ Failed to fetch status: ${err}`);
+      }
+    }
+
+    setInterval(updateStatus, 1000);
+  </script>
+</body>
+</html>
